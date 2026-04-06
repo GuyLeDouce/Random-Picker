@@ -1,4 +1,4 @@
-import type { OutputStyle, TweetOutputOptions, WinnerSnapshot } from '../types';
+import type { AppLanguage, OutputStyle, TweetOutputOptions, WinnerSnapshot } from '../types';
 
 function getWinnerLabel(winner: WinnerSnapshot) {
   return winner.handle ? `@${winner.handle}` : winner.displayName;
@@ -10,19 +10,36 @@ function buildLines(
   compact: boolean,
 ) {
   const winnerCount = winners.length;
-  const introByStyle: Record<OutputStyle, string> = {
-    clean: compact ? 'Winners:' : 'Winners are in',
-    hype: compact ? 'Giveaway winners:' : 'The giveaway winners are locked in',
-    minimal: compact ? 'Winners' : 'Winners',
+  const introByLanguage: Record<AppLanguage, Record<OutputStyle, string>> = {
+    en: {
+      clean: compact ? 'Winners:' : 'Winners are in',
+      hype: compact ? 'Giveaway winners:' : 'The giveaway winners are locked in',
+      minimal: compact ? 'Winners' : 'Winners',
+    },
+    fr: {
+      clean: compact ? 'Gagnants :' : 'Les gagnants sont là',
+      hype: compact ? 'Gagnants du giveaway :' : 'Les gagnants du giveaway sont confirmés',
+      minimal: compact ? 'Gagnants' : 'Gagnants',
+    },
   };
 
-  const outroByStyle: Record<OutputStyle, string> = {
-    clean: compact ? 'DM me to claim.' : 'DM me to claim',
-    hype:
-      compact
-        ? 'Congrats. DM me.'
-        : `Congrats to all ${winnerCount} of you. DM me to claim your prize.`,
-    minimal: '',
+  const outroByLanguage: Record<AppLanguage, Record<OutputStyle, string>> = {
+    en: {
+      clean: compact ? 'DM me to claim.' : 'DM me to claim',
+      hype:
+        compact
+          ? 'Congrats. DM me.'
+          : `Congrats to all ${winnerCount} of you. DM me to claim your prize.`,
+      minimal: '',
+    },
+    fr: {
+      clean: compact ? 'DM-moi pour réclamer.' : 'DM-moi pour réclamer',
+      hype:
+        compact
+          ? 'Bravo. DM-moi.'
+          : `Bravo à vous ${winnerCount}. DM-moi pour réclamer votre lot.`,
+      minimal: '',
+    },
   };
 
   const labels = winners.map((winner, index) => {
@@ -31,8 +48,8 @@ function buildLines(
     return `${prefix}${getWinnerLabel(winner)}${suffix}`.trim();
   });
 
-  const lines = [introByStyle[options.style], '', ...labels];
-  const outro = outroByStyle[options.style];
+  const lines = [introByLanguage[options.language][options.style], '', ...labels];
+  const outro = outroByLanguage[options.language][options.style];
   if (outro) {
     lines.push('', outro);
   }

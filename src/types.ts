@@ -1,6 +1,7 @@
 export type SortMode = 'recent' | 'name' | 'handle';
 export type OutputStyle = 'clean' | 'hype' | 'minimal';
 export type PickerMode = 'tweet' | 'comment';
+export type AppLanguage = 'en' | 'fr';
 
 export interface GiveawayEntry {
   id: string;
@@ -69,4 +70,5 @@ export interface TweetOutputOptions {
   style: OutputStyle;
   includeNumbering: boolean;
   includeTweetLinks: boolean;
+  language: AppLanguage;
 }

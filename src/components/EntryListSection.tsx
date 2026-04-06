@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import type { GiveawayEntry, SortMode } from '../types';
+import type { AppLanguage, GiveawayEntry, SortMode } from '../types';
 import { Avatar } from './Avatar';
 import { Section } from './Section';
 
 interface EntryListSectionProps {
   mode: 'tweet' | 'comment';
+  language: AppLanguage;
   entries: GiveawayEntry[];
   search: string;
   setSearch: (value: string) => void;
@@ -20,6 +21,7 @@ interface EntryListSectionProps {
 
 export function EntryListSection({
   mode,
+  language,
   entries,
   search,
   setSearch,
@@ -49,29 +51,38 @@ export function EntryListSection({
     }
 
     return ordered.filter((entry) =>
-      [entry.displayName, entry.handle, entry.tweetUrl, entry.note, entry.prize]
-        .join(' ')
-        .toLowerCase()
-        .includes(query),
+      [entry.displayName, entry.handle, entry.tweetUrl, entry.note, entry.prize].join(' ').toLowerCase().includes(query),
     );
   }, [entries, search, sortMode]);
 
   return (
     <Section
-      eyebrow="Entries"
-      title={mode === 'tweet' ? 'Entry List' : 'Comment Entry List'}
+      eyebrow={language === 'fr' ? 'Entrees' : 'Entries'}
+      title={
+        mode === 'tweet'
+          ? language === 'fr'
+            ? 'Liste dentrees'
+            : 'Entry List'
+          : language === 'fr'
+            ? 'Liste des commentaires'
+            : 'Comment Entry List'
+      }
       subtitle={
         mode === 'tweet'
-          ? 'Edit, deduplicate, search, and refresh metadata without leaving the app.'
-          : 'Manage imported comment entrants for the selected tweet and keep the draw local.'
+          ? language === 'fr'
+            ? 'Modifiez, dedupliquez, recherchez et actualisez les metadonnees sans quitter lapplication.'
+            : 'Edit, deduplicate, search, and refresh metadata without leaving the app.'
+          : language === 'fr'
+            ? 'Gerez les participants importes pour le tweet selectionne et gardez le tirage local.'
+            : 'Manage imported comment entrants for the selected tweet and keep the draw local.'
       }
       actions={
         <div className="inline-actions wrap">
           <button className="ghost-button" type="button" onClick={() => void onRefreshAll()}>
-            Refresh Metadata
+            {language === 'fr' ? 'Actualiser les metadonnees' : 'Refresh Metadata'}
           </button>
           <button className="danger-button" type="button" onClick={onClearAll}>
-            Clear All
+            {language === 'fr' ? 'Tout effacer' : 'Clear All'}
           </button>
         </div>
       }
@@ -80,18 +91,19 @@ export function EntryListSection({
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search by handle, name, prize, note, or URL"
+          placeholder={language === 'fr' ? 'Rechercher par handle, nom, lot, note ou URL' : 'Search by handle, name, prize, note, or URL'}
         />
         <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
-          <option value="recent">Most Recent</option>
-          <option value="name">Sort by Name</option>
-          <option value="handle">Sort by Handle</option>
+          <option value="recent">{language === 'fr' ? 'Plus recent' : 'Most Recent'}</option>
+          <option value="name">{language === 'fr' ? 'Trier par nom' : 'Sort by Name'}</option>
+          <option value="handle">{language === 'fr' ? 'Trier par handle' : 'Sort by Handle'}</option>
         </select>
       </div>
 
       {duplicateHandleWarnings.length ? (
         <div className="warning-banner">
-          Duplicate handles detected: {duplicateHandleWarnings.map((handle) => `@${handle}`).join(', ')}
+          {language === 'fr' ? 'Handles en double detectes :' : 'Duplicate handles detected:'}{' '}
+          {duplicateHandleWarnings.map((handle) => `@${handle}`).join(', ')}
         </div>
       ) : null}
 
@@ -101,8 +113,8 @@ export function EntryListSection({
             <div className="entry-top">
               <Avatar src={entry.avatarUrl} label={entry.displayName || entry.handle} />
               <div>
-                <h3>{entry.displayName || entry.handle || 'Unnamed entry'}</h3>
-                <p className="muted">@{entry.handle || 'unknown'}</p>
+                <h3>{entry.displayName || entry.handle || (language === 'fr' ? 'Entree sans nom' : 'Unnamed entry')}</h3>
+                <p className="muted">@{entry.handle || (language === 'fr' ? 'inconnu' : 'unknown')}</p>
                 <p className="mono">{entry.tweetId}</p>
               </div>
             </div>
@@ -110,18 +122,18 @@ export function EntryListSection({
               {entry.tweetUrl}
             </a>
             {entry.commentText ? <p className="entry-note">{entry.commentText}</p> : null}
-            {entry.prize ? <p className="chip">Prize: {entry.prize}</p> : null}
+            {entry.prize ? <p className="chip">{language === 'fr' ? 'Lot :' : 'Prize:'} {entry.prize}</p> : null}
             {entry.note ? <p className="entry-note">{entry.note}</p> : null}
-            <p className="muted small">Metadata: {entry.metadataStatus}</p>
+            <p className="muted small">{language === 'fr' ? 'Metadonnees :' : 'Metadata:'} {entry.metadataStatus}</p>
             <div className="inline-actions wrap">
               <button className="secondary-button" type="button" onClick={() => onEdit(entry)}>
-                Edit
+                {language === 'fr' ? 'Modifier' : 'Edit'}
               </button>
               <button className="ghost-button" type="button" onClick={() => void onRefreshEntry(entry.id)}>
-                Refresh
+                {language === 'fr' ? 'Actualiser' : 'Refresh'}
               </button>
               <button className="danger-button" type="button" onClick={() => onDelete(entry.id)}>
-                Delete
+                {language === 'fr' ? 'Supprimer' : 'Delete'}
               </button>
             </div>
           </article>

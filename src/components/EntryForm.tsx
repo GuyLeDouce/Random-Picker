@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import type { EntryDraft } from '../types';
+import type { AppLanguage, EntryDraft } from '../types';
 
 interface EntryFormProps {
   initialValue: EntryDraft;
   onSubmit: (draft: EntryDraft) => void;
   onCancel?: () => void;
   submitLabel: string;
+  language: AppLanguage;
 }
 
-export function EntryForm({ initialValue, onSubmit, onCancel, submitLabel }: EntryFormProps) {
+export function EntryForm({ initialValue, onSubmit, onCancel, submitLabel, language }: EntryFormProps) {
   const [draft, setDraft] = useState(initialValue);
 
   useEffect(() => {
@@ -29,11 +30,11 @@ export function EntryForm({ initialValue, onSubmit, onCancel, submitLabel }: Ent
     >
       <div className="field-grid">
         <label>
-          <span>Display Name</span>
+          <span>{language === 'fr' ? 'Nom affiche' : 'Display Name'}</span>
           <input
             value={draft.displayName}
             onChange={(event) => updateField('displayName', event.target.value)}
-            placeholder="Winner name"
+            placeholder={language === 'fr' ? 'Nom du gagnant' : 'Winner name'}
           />
         </label>
         <label>
@@ -45,7 +46,7 @@ export function EntryForm({ initialValue, onSubmit, onCancel, submitLabel }: Ent
           />
         </label>
         <label className="wide">
-          <span>Avatar URL</span>
+          <span>{language === 'fr' ? "URL de lavatar" : 'Avatar URL'}</span>
           <input
             value={draft.avatarUrl}
             onChange={(event) => updateField('avatarUrl', event.target.value)}
@@ -53,7 +54,7 @@ export function EntryForm({ initialValue, onSubmit, onCancel, submitLabel }: Ent
           />
         </label>
         <label className="wide">
-          <span>Tweet URL</span>
+          <span>{language === 'fr' ? 'URL du tweet' : 'Tweet URL'}</span>
           <input
             value={draft.tweetUrl}
             onChange={(event) => updateField('tweetUrl', event.target.value)}
@@ -61,27 +62,27 @@ export function EntryForm({ initialValue, onSubmit, onCancel, submitLabel }: Ent
           />
         </label>
         <label className="wide">
-          <span>Comment Text</span>
+          <span>{language === 'fr' ? 'Texte du commentaire' : 'Comment Text'}</span>
           <input
             value={draft.commentText}
             onChange={(event) => updateField('commentText', event.target.value)}
-            placeholder="Optional reply/comment text"
+            placeholder={language === 'fr' ? 'Texte optionnel de commentaire' : 'Optional reply/comment text'}
           />
         </label>
         <label>
-          <span>Prize</span>
+          <span>{language === 'fr' ? 'Lot' : 'Prize'}</span>
           <input
             value={draft.prize}
             onChange={(event) => updateField('prize', event.target.value)}
-            placeholder="Optional prize"
+            placeholder={language === 'fr' ? 'Lot optionnel' : 'Optional prize'}
           />
         </label>
         <label>
-          <span>Note</span>
+          <span>{language === 'fr' ? 'Note' : 'Note'}</span>
           <input
             value={draft.note}
             onChange={(event) => updateField('note', event.target.value)}
-            placeholder="Optional note"
+            placeholder={language === 'fr' ? 'Note optionnelle' : 'Optional note'}
           />
         </label>
       </div>
@@ -91,7 +92,7 @@ export function EntryForm({ initialValue, onSubmit, onCancel, submitLabel }: Ent
         </button>
         {onCancel ? (
           <button className="ghost-button" type="button" onClick={onCancel}>
-            Cancel
+            {language === 'fr' ? 'Annuler' : 'Cancel'}
           </button>
         ) : null}
       </div>

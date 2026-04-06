@@ -10,6 +10,7 @@ import { SquigsLogo } from './components/SquigsLogo';
 import { TweetOutputSection } from './components/TweetOutputSection';
 import { WinnersSection } from './components/WinnersSection';
 import type {
+  AppLanguage,
   AppStateExport,
   DrawRecord,
   EntryDraft,
@@ -116,6 +117,7 @@ function mergeEntries(existing: GiveawayEntry[], incoming: GiveawayEntry[]) {
 
 export default function App() {
   const [mode, setMode] = useState<PickerMode>('tweet');
+  const [language, setLanguage] = useState<AppLanguage>('en');
 
   const [tweetEntries, setTweetEntries] = useState<GiveawayEntry[]>(() => loadTweetEntries());
   const [tweetHistory, setTweetHistory] = useState<DrawRecord[]>(() => loadTweetHistory());
@@ -211,9 +213,11 @@ export default function App() {
         style: outputStyle,
         includeNumbering,
         includeTweetLinks,
+        language,
       }),
-    [visibleWinners, outputStyle, includeNumbering, includeTweetLinks],
+    [visibleWinners, outputStyle, includeNumbering, includeTweetLinks, language],
   );
+
   const winnersOnlyText = useMemo(
     () => buildWinnersOnly(visibleWinners, includeNumbering),
     [visibleWinners, includeNumbering],
@@ -234,6 +238,7 @@ export default function App() {
       await new Promise((resolve) => window.setTimeout(resolve, 450));
       setVisibleWinners((current) => [...current, record.winners[index]]);
     }
+
     confetti({ particleCount: 200, spread: 120, origin: { y: 0.6 } });
   }
 
@@ -242,6 +247,7 @@ export default function App() {
       setTweetEntries(next);
       return;
     }
+
     setCommentEntries(next);
   }
 
@@ -250,6 +256,7 @@ export default function App() {
       setTweetHistory(next);
       return;
     }
+
     setCommentHistory(next);
   }
 
@@ -258,6 +265,7 @@ export default function App() {
       setTweetCurrentDraw(next);
       return;
     }
+
     setCommentCurrentDraw(next);
   }
 
@@ -268,19 +276,31 @@ export default function App() {
       .filter(Boolean);
 
     if (!lines.length) {
-      window.alert(`Paste at least one ${mode === 'tweet' ? 'tweet' : 'comment'} URL.`);
+      window.alert(
+        language === 'fr'
+          ? `Collez au moins une URL de ${mode === 'tweet' ? 'tweet' : 'commentaire'}.`
+          : `Paste at least one ${mode === 'tweet' ? 'tweet' : 'comment'} URL.`,
+      );
       return;
     }
 
     if (mode === 'comment' && !commentTargetTweetUrl.trim()) {
-      window.alert('Set the target tweet URL before importing comments.');
+      window.alert(
+        language === 'fr'
+          ? "Definissez l'URL du tweet cible avant d'importer des commentaires."
+          : 'Set the target tweet URL before importing comments.',
+      );
       return;
     }
 
     const dedupedLines = Array.from(new Set(lines));
 
     if (activeEntries.length + dedupedLines.length > MAX_ENTRIES) {
-      window.alert(`This app supports up to ${MAX_ENTRIES} entries.`);
+      window.alert(
+        language === 'fr'
+          ? `Cette application prend en charge jusqua ${MAX_ENTRIES} entrees.`
+          : `This app supports up to ${MAX_ENTRIES} entries.`,
+      );
       return;
     }
 
@@ -288,7 +308,13 @@ export default function App() {
     for (const line of dedupedLines) {
       const parsed = parseTweetUrl(line);
       if (!parsed.isValid) {
-        window.alert(`${line}\n\n${parsed.error}`);
+        window.alert(
+          `${line}\n\n${
+            language === 'fr'
+              ? 'Entrez une URL de statut x.com ou twitter.com valide.'
+              : parsed.error
+          }`,
+        );
         return;
       }
 
@@ -322,13 +348,17 @@ export default function App() {
 
   async function importCsvText(value: string) {
     if (mode === 'comment' && !commentTargetTweetUrl.trim()) {
-      window.alert('Set the target tweet URL before importing comments.');
+      window.alert(
+        language === 'fr'
+          ? "Definissez l'URL du tweet cible avant d'importer des commentaires."
+          : 'Set the target tweet URL before importing comments.',
+      );
       return;
     }
 
     const rows = importEntriesCsv(value);
     if (!rows.length) {
-      window.alert('CSV import is empty.');
+      window.alert(language === 'fr' ? "Limport CSV est vide." : 'CSV import is empty.');
       return;
     }
 
@@ -345,7 +375,11 @@ export default function App() {
     );
 
     if (activeEntries.length + incoming.length > MAX_ENTRIES) {
-      window.alert(`This app supports up to ${MAX_ENTRIES} entries.`);
+      window.alert(
+        language === 'fr'
+          ? `Cette application prend en charge jusqua ${MAX_ENTRIES} entrees.`
+          : `This app supports up to ${MAX_ENTRIES} entries.`,
+      );
       return;
     }
 
@@ -359,13 +393,18 @@ export default function App() {
 
     const trimmedTargetUrl = commentTargetTweetUrl.trim();
     if (!trimmedTargetUrl) {
-      window.alert('Set the target tweet URL before fetching replies.');
+      window.alert(
+        language === 'fr'
+          ? "Definissez l'URL du tweet cible avant de recuperer les reponses."
+          : 'Set the target tweet URL before fetching replies.',
+      );
       return;
     }
 
     const response = await fetch(
       `/api/replies?tweetUrl=${encodeURIComponent(trimmedTargetUrl)}&limit=${encodeURIComponent(String(replyFetchLimit))}`,
     );
+
     const payload = (await response.json()) as {
       error?: string;
       targetTweetUrl?: string;
@@ -380,12 +419,16 @@ export default function App() {
       }>;
       meta?: {
         importedCount: number;
-        cappedLimit: number;
       };
     };
 
     if (!response.ok || payload.error) {
-      window.alert(payload.error || 'Unable to fetch replies from X.');
+      window.alert(
+        payload.error ||
+          (language === 'fr'
+            ? 'Impossible de recuperer les reponses depuis X.'
+            : 'Unable to fetch replies from X.'),
+      );
       return;
     }
 
@@ -408,24 +451,46 @@ export default function App() {
 
     setCommentTargetTweetUrl(payload.targetTweetUrl || trimmedTargetUrl);
     setCommentEntries((current) => mergeEntries(current, incoming));
-    window.alert(`Imported ${payload.meta?.importedCount ?? incoming.length} replies from X.`);
+    window.alert(
+      language === 'fr'
+        ? `${payload.meta?.importedCount ?? incoming.length} reponses importees depuis X.`
+        : `Imported ${payload.meta?.importedCount ?? incoming.length} replies from X.`,
+    );
   }
 
   async function addManualEntry(draft: EntryDraft) {
     if (mode === 'comment' && !commentTargetTweetUrl.trim()) {
-      window.alert('Set the target tweet URL before adding comments.');
+      window.alert(
+        language === 'fr'
+          ? "Definissez l'URL du tweet cible avant d'ajouter des commentaires."
+          : 'Set the target tweet URL before adding comments.',
+      );
       return;
     }
 
     const entry = createEntryFromDraft(draft);
     if (!entry.tweetUrl) {
-      window.alert(mode === 'tweet' ? 'Manual entries still need a tweet URL.' : 'Manual comments still need a comment URL.');
+      window.alert(
+        mode === 'tweet'
+          ? language === 'fr'
+            ? 'Les entrees manuelles ont toujours besoin dune URL de tweet.'
+            : 'Manual entries still need a tweet URL.'
+          : language === 'fr'
+            ? 'Les commentaires manuels ont toujours besoin dune URL de commentaire.'
+            : 'Manual comments still need a comment URL.',
+      );
       return;
     }
+
     if (activeEntries.length >= MAX_ENTRIES) {
-      window.alert(`This app supports up to ${MAX_ENTRIES} entries.`);
+      window.alert(
+        language === 'fr'
+          ? `Cette application prend en charge jusqua ${MAX_ENTRIES} entrees.`
+          : `This app supports up to ${MAX_ENTRIES} entries.`,
+      );
       return;
     }
+
     setEntriesForMode((current) => mergeEntries(current, [entry]));
   }
 
@@ -467,7 +532,11 @@ export default function App() {
     }
 
     if (eligibleEntries.length < winnerCount) {
-      window.alert(`At least ${winnerCount} eligible entries are required.`);
+      window.alert(
+        language === 'fr'
+          ? `Au moins ${winnerCount} entrees eligibles sont requises.`
+          : `At least ${winnerCount} eligible entries are required.`,
+      );
       return;
     }
 
@@ -498,7 +567,7 @@ export default function App() {
     try {
       await navigator.clipboard.writeText(value);
     } catch {
-      window.alert('Clipboard copy failed.');
+      window.alert(language === 'fr' ? 'La copie dans le presse-papiers a echoue.' : 'Clipboard copy failed.');
     }
   }
 
@@ -568,70 +637,86 @@ export default function App() {
 
   const heroSubtitle =
     mode === 'tweet'
-      ? 'Public-ready giveaway picker for tweet-based draws, clean winner reveals, and fast posting.'
-      : 'Single-tweet comment selector for imported reply pools, clean reveals, and fair rerolls.';
+      ? language === 'fr'
+        ? 'Selecteur de giveaway pret pour le public avec tirages bases sur des tweets, revelations soignees et publication rapide.'
+        : 'Public-ready giveaway picker for tweet-based draws, clean winner reveals, and fast posting.'
+      : language === 'fr'
+        ? 'Selecteur de commentaires pour un seul tweet avec import de reponses, revelations propres et rerolls equitables.'
+        : 'Single-tweet comment selector for imported reply pools, clean reveals, and fair rerolls.';
 
   return (
     <div className="app-shell">
       <header className="hero brand-hero">
         <div className="hero-copy">
           <div className="brand-badge-row">
-            <span className="brand-badge">Squigs Giveaway Tools</span>
-            <span className="brand-badge muted-badge">Public-facing brand refresh</span>
+            <span className="brand-badge">{language === 'fr' ? 'Outils giveaway Squigs' : 'Squigs Giveaway Tools'}</span>
+            <span className="brand-badge muted-badge">
+              {language === 'fr' ? 'Refonte publique de la marque' : 'Public-facing brand refresh'}
+            </span>
           </div>
           <SquigsLogo />
-          <h1>Squigs Giveaway Picker</h1>
+          <h1>{language === 'fr' ? 'Selecteur Giveaway Squigs' : 'Squigs Giveaway Picker'}</h1>
           <p className="hero-subtitle">{heroSubtitle}</p>
           <p className="brand-summary">
-            Pick winners from tweets or imported comments with a cleaner branded interface that is ready for a public
-            landing page feel, not just an internal utility.
+            {language === 'fr'
+              ? 'Choisissez des gagnants a partir de tweets ou de commentaires importes avec une interface de marque plus propre, pensee comme un produit public et pas seulement comme un utilitaire interne.'
+              : 'Pick winners from tweets or imported comments with a cleaner branded interface that is ready for a public landing page feel, not just an internal utility.'}
           </p>
           <div className="hero-feature-row">
-            <span className="hero-pill">Tweet Selector</span>
-            <span className="hero-pill">Comment Selector</span>
-            <span className="hero-pill">Copy-Ready Winner Posts</span>
-            <span className="hero-pill">Local Audit History</span>
+            <span className="hero-pill">{language === 'fr' ? 'Selecteur de tweets' : 'Tweet Selector'}</span>
+            <span className="hero-pill">{language === 'fr' ? 'Selecteur de commentaires' : 'Comment Selector'}</span>
+            <span className="hero-pill">{language === 'fr' ? 'Posts gagnants prets a copier' : 'Copy-Ready Winner Posts'}</span>
+            <span className="hero-pill">{language === 'fr' ? 'Historique local daudit' : 'Local Audit History'}</span>
           </div>
           <div className="mode-switcher">
-            <button
-              className={`mode-button ${mode === 'tweet' ? 'active' : ''}`}
-              type="button"
-              onClick={() => setMode('tweet')}
-            >
-              Tweet Selector
+            <button className={`mode-button ${mode === 'tweet' ? 'active' : ''}`} type="button" onClick={() => setMode('tweet')}>
+              {language === 'fr' ? 'Selecteur de tweets' : 'Tweet Selector'}
             </button>
-            <button
-              className={`mode-button ${mode === 'comment' ? 'active' : ''}`}
-              type="button"
-              onClick={() => setMode('comment')}
-            >
-              Comment Selector
+            <button className={`mode-button ${mode === 'comment' ? 'active' : ''}`} type="button" onClick={() => setMode('comment')}>
+              {language === 'fr' ? 'Selecteur de commentaires' : 'Comment Selector'}
             </button>
           </div>
         </div>
+
         <aside className="hero-side">
           <div className="hero-stats">
             <div className="hero-stat">
               <strong>{activeEntries.length}</strong>
-              <span>{mode === 'tweet' ? 'Tweet Entries' : 'Comment Entries'}</span>
+              <span>
+                {mode === 'tweet'
+                  ? language === 'fr'
+                    ? 'Entrees de tweets'
+                    : 'Tweet Entries'
+                  : language === 'fr'
+                    ? 'Entrees de commentaires'
+                    : 'Comment Entries'}
+              </span>
             </div>
             <div className="hero-stat">
               <strong>{activeHistory.length}</strong>
-              <span>Past Draws</span>
+              <span>{language === 'fr' ? 'Tirages passes' : 'Past Draws'}</span>
             </div>
             <div className="hero-stat">
               <strong>{visibleWinners.length}</strong>
-              <span>Visible Winners</span>
+              <span>{language === 'fr' ? 'Gagnants visibles' : 'Visible Winners'}</span>
             </div>
           </div>
+
           <div className="hero-note-card">
-            <p className="eyebrow">Brand Mode</p>
-            <h2>{mode === 'tweet' ? 'Tweet giveaway flow' : 'Comment giveaway flow'}</h2>
+            <p className="eyebrow">{language === 'fr' ? 'Mode de marque' : 'Brand Mode'}</p>
+            <h2>{mode === 'tweet' ? (language === 'fr' ? 'Flux giveaway tweet' : 'Tweet giveaway flow') : language === 'fr' ? 'Flux giveaway commentaires' : 'Comment giveaway flow'}</h2>
             <p>
               {mode === 'tweet'
-                ? 'Paste status links, refine entrants, then reveal winners with a branded announcement block.'
-                : 'Use one target tweet, import comment entrants, and run a focused reply-based giveaway draw.'}
+                ? language === 'fr'
+                  ? "Collez des liens de statut, affinez les participants, puis revelez les gagnants avec un bloc dannonce de marque."
+                  : 'Paste status links, refine entrants, then reveal winners with a branded announcement block.'
+                : language === 'fr'
+                  ? 'Utilisez un tweet cible, importez les commentaires participants et lancez un tirage cible base sur les reponses.'
+                  : 'Use one target tweet, import comment entrants, and run a focused reply-based giveaway draw.'}
             </p>
+            <button className="ghost-button language-toggle" type="button" onClick={() => setLanguage((current) => (current === 'en' ? 'fr' : 'en'))}>
+              {language === 'en' ? 'Utilisez cette application en francais' : 'Use this App in English'}
+            </button>
           </div>
         </aside>
       </header>
@@ -639,6 +724,7 @@ export default function App() {
       <main className="layout">
         <BulkInputSection
           mode={mode}
+          language={language}
           totalEntries={activeEntries.length}
           targetTweetUrl={commentTargetTweetUrl}
           replyFetchLimit={replyFetchLimit}
@@ -661,7 +747,15 @@ export default function App() {
         />
 
         {editingEntry ? (
-          <Section eyebrow="Edit" title="Edit Entry" subtitle="Update a saved entry without losing local history.">
+          <Section
+            eyebrow={language === 'fr' ? 'Modifier' : 'Edit'}
+            title={language === 'fr' ? 'Modifier lentree' : 'Edit Entry'}
+            subtitle={
+              language === 'fr'
+                ? 'Mettez a jour une entree enregistree sans perdre lhistoire locale.'
+                : 'Update a saved entry without losing local history.'
+            }
+          >
             <EntryForm
               initialValue={{
                 displayName: editingEntry.displayName,
@@ -672,7 +766,8 @@ export default function App() {
                 note: editingEntry.note,
                 prize: editingEntry.prize,
               }}
-              submitLabel="Save Changes"
+              submitLabel={language === 'fr' ? 'Enregistrer les modifications' : 'Save Changes'}
+              language={language}
               onCancel={() => setEditingEntry(null)}
               onSubmit={(draft) => {
                 try {
@@ -692,7 +787,13 @@ export default function App() {
                   );
                   setEditingEntry(null);
                 } catch (error) {
-                  window.alert(error instanceof Error ? error.message : 'Unable to save entry.');
+                  window.alert(
+                    error instanceof Error
+                      ? error.message
+                      : language === 'fr'
+                        ? 'Impossible denregistrer lentree.'
+                        : 'Unable to save entry.',
+                  );
                 }
               }}
             />
@@ -701,6 +802,7 @@ export default function App() {
 
         <EntryListSection
           mode={mode}
+          language={language}
           entries={activeEntries}
           search={search}
           setSearch={setSearch}
@@ -712,7 +814,11 @@ export default function App() {
           onRefreshEntry={refreshEntry}
           onRefreshAll={refreshAllMetadata}
           onClearAll={() => {
-            if (!window.confirm('Clear all entries and the current draw?')) {
+            if (
+              !window.confirm(
+                language === 'fr' ? 'Tout effacer les entrees et le tirage actuel ?' : 'Clear all entries and the current draw?',
+              )
+            ) {
               return;
             }
             setEntriesForMode([]);
@@ -723,6 +829,7 @@ export default function App() {
 
         <DrawControlsSection
           entries={activeEntries}
+          language={language}
           eligibleEntriesCount={eligibleEntries.length}
           winnerCount={winnerCount}
           setWinnerCount={setWinnerCount}
@@ -736,10 +843,11 @@ export default function App() {
           onReroll={reroll}
         />
 
-        <WinnersSection mode={mode} currentDraw={activeCurrentDraw} visibleWinners={visibleWinners} />
+        <WinnersSection mode={mode} language={language} currentDraw={activeCurrentDraw} visibleWinners={visibleWinners} />
 
         <TweetOutputSection
           winners={visibleWinners}
+          language={language}
           outputStyle={outputStyle}
           setOutputStyle={setOutputStyle}
           includeNumbering={includeNumbering}
@@ -755,6 +863,7 @@ export default function App() {
 
         <AuditHistorySection
           currentDraw={activeCurrentDraw}
+          language={language}
           history={activeHistory}
           onExportHistoryCsv={() =>
             downloadText(
@@ -764,7 +873,7 @@ export default function App() {
             )
           }
           onResetHistory={() => {
-            if (!window.confirm('Reset winner history?')) {
+            if (!window.confirm(language === 'fr' ? 'Reinitialiser lhistoire des gagnants ?' : 'Reset winner history?')) {
               return;
             }
             setHistoryForMode([]);
