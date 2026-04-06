@@ -42,6 +42,7 @@ import { buildHandlesOnly, buildTweetLinksOnly, buildTweetText, buildWinnersOnly
 
 const MAX_ENTRIES = 100;
 const DEFAULT_WINNER_COUNT = 4;
+const DEFAULT_REPLY_FETCH_LIMIT = 50;
 
 function createId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -129,6 +130,7 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('recent');
   const [winnerCount, setWinnerCount] = useState(DEFAULT_WINNER_COUNT);
+  const [replyFetchLimit, setReplyFetchLimit] = useState(DEFAULT_REPLY_FETCH_LIMIT);
   const [excludePreviousWinners, setExcludePreviousWinners] = useState(false);
   const [lockWinners, setLockWinners] = useState(true);
   const [revealMode, setRevealMode] = useState<'all' | 'one'>('all');
@@ -348,6 +350,65 @@ export default function App() {
     }
 
     setEntriesForMode((current) => mergeEntries(current, incoming));
+  }
+
+  async function autoImportReplies() {
+    if (mode !== 'comment') {
+      return;
+    }
+
+    const trimmedTargetUrl = commentTargetTweetUrl.trim();
+    if (!trimmedTargetUrl) {
+      window.alert('Set the target tweet URL before fetching replies.');
+      return;
+    }
+
+    const response = await fetch(
+      `/api/replies?tweetUrl=${encodeURIComponent(trimmedTargetUrl)}&limit=${encodeURIComponent(String(replyFetchLimit))}`,
+    );
+    const payload = (await response.json()) as {
+      error?: string;
+      targetTweetUrl?: string;
+      replies?: Array<{
+        tweetUrl: string;
+        normalizedTweetUrl: string;
+        tweetId: string;
+        displayName: string;
+        handle: string;
+        avatarUrl: string;
+        commentText: string;
+      }>;
+      meta?: {
+        importedCount: number;
+        cappedLimit: number;
+      };
+    };
+
+    if (!response.ok || payload.error) {
+      window.alert(payload.error || 'Unable to fetch replies from X.');
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const incoming: GiveawayEntry[] = (payload.replies || []).map((reply) => ({
+      id: createId('comment'),
+      tweetUrl: reply.tweetUrl,
+      normalizedTweetUrl: reply.normalizedTweetUrl,
+      tweetId: reply.tweetId,
+      displayName: reply.displayName,
+      handle: reply.handle,
+      avatarUrl: reply.avatarUrl,
+      commentText: reply.commentText,
+      note: '',
+      prize: '',
+      createdAt: now,
+      updatedAt: now,
+      metadataStatus: 'enhanced',
+    }));
+
+    setCommentTargetTweetUrl(payload.targetTweetUrl || trimmedTargetUrl);
+    setCommentEntries((current) => mergeEntries(current, incoming));
+    window.alert(`Imported ${payload.meta?.importedCount ?? incoming.length} replies from X.`);
   }
 
   async function addManualEntry(draft: EntryDraft) {
@@ -580,7 +641,10 @@ export default function App() {
           mode={mode}
           totalEntries={activeEntries.length}
           targetTweetUrl={commentTargetTweetUrl}
+          replyFetchLimit={replyFetchLimit}
           onTargetTweetUrlChange={setCommentTargetTweetUrl}
+          onReplyFetchLimitChange={setReplyFetchLimit}
+          onAutoImportReplies={autoImportReplies}
           onImportLinks={importLinkBlock}
           onImportCsv={importCsvText}
           onImportJson={importJson}

@@ -6,6 +6,8 @@ import { extname, join, normalize } from 'node:path';
 const port = Number(process.env.PORT || 3000);
 const host = '0.0.0.0';
 const distDir = join(process.cwd(), 'dist');
+const X_BEARER_TOKEN = process.env.X_BEARER_TOKEN;
+const MAX_REPLY_IMPORT = 100;
 
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
@@ -19,14 +21,110 @@ const mimeTypes = {
   '.map': 'application/json; charset=utf-8',
 };
 
+const TWEET_URL_REGEX =
+  /^https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/([A-Za-z0-9_]{1,15})\/status\/(\d+)(?:\/.*)?(?:\?.*)?$/i;
+
+function writeJson(response, statusCode, payload) {
+  response.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
+  response.end(JSON.stringify(payload));
+}
+
 function sendNotFound(response) {
   response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
   response.end('Not found');
 }
 
+function parseTweetUrl(url) {
+  const match = url.trim().match(TWEET_URL_REGEX);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    handle: match[1],
+    tweetId: match[2],
+    normalizedUrl: `https://x.com/${match[1]}/status/${match[2]}`,
+  };
+}
+
+async function fetchRecentReplies(tweetUrl, limit) {
+  const parsed = parseTweetUrl(tweetUrl);
+  if (!parsed) {
+    return { error: 'Enter a valid x.com or twitter.com status URL.', statusCode: 400 };
+  }
+
+  if (!X_BEARER_TOKEN) {
+    return { error: 'X_BEARER_TOKEN is not configured on the server.', statusCode: 500 };
+  }
+
+  const cappedLimit = Math.max(1, Math.min(limit, MAX_REPLY_IMPORT));
+  const searchParams = new URLSearchParams({
+    query: `conversation_id:${parsed.tweetId} is:reply`,
+    max_results: String(Math.min(cappedLimit, 100)),
+    expansions: 'author_id',
+    'tweet.fields': 'author_id,conversation_id,created_at,text',
+    'user.fields': 'name,username,profile_image_url',
+  });
+
+  const response = await fetch(`https://api.x.com/2/tweets/search/recent?${searchParams.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${X_BEARER_TOKEN}`,
+    },
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    const message =
+      payload?.detail ||
+      payload?.title ||
+      payload?.errors?.[0]?.message ||
+      'X API request failed.';
+    return { error: message, statusCode: response.status };
+  }
+
+  const usersById = new Map((payload.includes?.users || []).map((user) => [user.id, user]));
+  const replies = (payload.data || []).map((tweet) => {
+    const user = usersById.get(tweet.author_id);
+    return {
+      tweetUrl: user?.username ? `https://x.com/${user.username}/status/${tweet.id}` : `https://x.com/i/status/${tweet.id}`,
+      normalizedTweetUrl: user?.username
+        ? `https://x.com/${user.username}/status/${tweet.id}`
+        : `https://x.com/i/status/${tweet.id}`,
+      tweetId: tweet.id,
+      displayName: user?.name || user?.username || `reply-${tweet.id}`,
+      handle: user?.username || '',
+      avatarUrl: user?.profile_image_url || '',
+      commentText: tweet.text || '',
+      fetchedAt: new Date().toISOString(),
+    };
+  });
+
+  return {
+    statusCode: 200,
+    targetTweetUrl: parsed.normalizedUrl,
+    replies,
+    meta: {
+      requestedLimit: limit,
+      importedCount: replies.length,
+      cappedLimit,
+    },
+  };
+}
+
 const server = createServer(async (request, response) => {
   try {
-    const rawPath = request.url?.split('?')[0] || '/';
+    const requestUrl = new URL(request.url || '/', `http://${request.headers.host || `${host}:${port}`}`);
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/replies') {
+      const tweetUrl = requestUrl.searchParams.get('tweetUrl') || '';
+      const limit = Number(requestUrl.searchParams.get('limit') || MAX_REPLY_IMPORT);
+      const result = await fetchRecentReplies(tweetUrl, limit);
+      writeJson(response, result.statusCode, result);
+      return;
+    }
+
+    const rawPath = requestUrl.pathname || '/';
     const safePath = normalize(rawPath).replace(/^(\.\.[/\\])+/, '');
     let filePath = join(distDir, safePath === '/' ? 'index.html' : safePath);
 

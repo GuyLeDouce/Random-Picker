@@ -56,15 +56,16 @@ This means the app remains usable with tweet URLs alone.
 The app now includes a separate local `Comment Selector` mode:
 
 - Set one target tweet URL
+- Fetch recent replies from X with one capped server request
 - Import reply/comment URLs for that tweet
 - Or add comment entrants manually / by CSV
 - Draw winners from that imported comment pool locally
 
 Important:
 
-- The app does not auto-fetch all X/Twitter replies in-browser
-- Reply collection is still local/manual or CSV-based
-- This keeps the app backend-free and reliable on your own machine
+- Automatic reply import now uses the Railway backend and `X_BEARER_TOKEN`
+- To keep usage low, each import is capped and only runs when you click the fetch button
+- Recent Search limits still apply on the X side, so this works best for recent giveaway tweets
 
 ## CSV Format
 

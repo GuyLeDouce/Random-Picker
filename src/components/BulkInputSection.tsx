@@ -7,7 +7,10 @@ interface BulkInputSectionProps {
   mode: 'tweet' | 'comment';
   totalEntries: number;
   targetTweetUrl: string;
+  replyFetchLimit: number;
   onTargetTweetUrlChange: (value: string) => void;
+  onReplyFetchLimitChange: (value: number) => void;
+  onAutoImportReplies: () => Promise<void>;
   onImportLinks: (value: string) => Promise<void>;
   onImportCsv: (value: string) => Promise<void>;
   onImportJson: (file: File) => Promise<void>;
@@ -31,7 +34,10 @@ export function BulkInputSection({
   mode,
   totalEntries,
   targetTweetUrl,
+  replyFetchLimit,
   onTargetTweetUrlChange,
+  onReplyFetchLimitChange,
+  onAutoImportReplies,
   onImportLinks,
   onImportCsv,
   onImportJson,
@@ -66,14 +72,38 @@ export function BulkInputSection({
       actions={<div className="stat-pill">{totalEntries} / 100 entries</div>}
     >
       {mode === 'comment' ? (
-        <label className="stack">
-          <span>Target Tweet URL</span>
-          <input
-            value={targetTweetUrl}
-            onChange={(event) => onTargetTweetUrlChange(event.target.value)}
-            placeholder="https://x.com/creator/status/123456789"
-          />
-        </label>
+        <div className="comment-fetch-panel">
+          <label className="stack">
+            <span>Target Tweet URL</span>
+            <input
+              value={targetTweetUrl}
+              onChange={(event) => onTargetTweetUrlChange(event.target.value)}
+              placeholder="https://x.com/creator/status/123456789"
+            />
+          </label>
+          <label className="stack fetch-limit-field">
+            <span>Reply import cap</span>
+            <select
+              value={String(replyFetchLimit)}
+              onChange={(event) => onReplyFetchLimitChange(Number(event.target.value))}
+            >
+              <option value="25">25 replies</option>
+              <option value="50">50 replies</option>
+              <option value="100">100 replies</option>
+            </select>
+          </label>
+          <div className="stack">
+            <span className="muted small">One server request per import. Recent replies only to keep X API usage low.</span>
+            <button
+              className="primary-button"
+              type="button"
+              disabled={busy}
+              onClick={() => void runBusyTask(onAutoImportReplies)}
+            >
+              Fetch Replies From X
+            </button>
+          </div>
+        </div>
       ) : null}
       <div className="two-column">
         <div className="stack">
