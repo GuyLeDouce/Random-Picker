@@ -18,6 +18,8 @@ This repo is now compatible with a simple Railway static deployment flow:
 
 `npm start` runs a small Node server that serves the built `dist/` folder on `0.0.0.0:$PORT`, which is what Railway expects.
 
+The repo also includes [railway.json](C:/Users/Nelson/Desktop/Name%20Picker/railway.json), which explicitly tells Railway to use `RAILPACK`, run `npm run build`, and start with `npm start`.
+
 ## What It Does
 
 - Paste up to 100 `x.com` or `twitter.com` tweet links
