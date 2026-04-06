@@ -8,6 +8,16 @@ Local desktop-friendly giveaway winner picker built with Vite, React, and TypeSc
 2. `npm run dev`
 3. Open the localhost URL shown in the terminal, usually `http://localhost:5173`
 
+## Railway
+
+This repo is now compatible with a simple Railway static deployment flow:
+
+1. Install command: `npm install`
+2. Build command: `npm run build`
+3. Start command: `npm start`
+
+`npm start` runs a small Node server that serves the built `dist/` folder on `0.0.0.0:$PORT`, which is what Railway expects.
+
 ## What It Does
 
 - Paste up to 100 `x.com` or `twitter.com` tweet links
