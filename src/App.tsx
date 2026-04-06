@@ -6,6 +6,7 @@ import { DrawControlsSection } from './components/DrawControlsSection';
 import { EntryForm } from './components/EntryForm';
 import { EntryListSection } from './components/EntryListSection';
 import { Section } from './components/Section';
+import { SquigsLogo } from './components/SquigsLogo';
 import { TweetOutputSection } from './components/TweetOutputSection';
 import { WinnersSection } from './components/WinnersSection';
 import type {
@@ -506,16 +507,30 @@ export default function App() {
 
   const heroSubtitle =
     mode === 'tweet'
-      ? 'Paste up to 100 tweet links, pick winners, and copy a tweet-ready winner announcement.'
-      : 'Set one target tweet, import comment entries, and draw winners from that comment pool locally.';
+      ? 'Public-ready giveaway picker for tweet-based draws, clean winner reveals, and fast posting.'
+      : 'Single-tweet comment selector for imported reply pools, clean reveals, and fair rerolls.';
 
   return (
     <div className="app-shell">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">Local Desktop Tool</p>
-          <h1>Giveaway Tweet Picker</h1>
+      <header className="hero brand-hero">
+        <div className="hero-copy">
+          <div className="brand-badge-row">
+            <span className="brand-badge">Squigs Giveaway Tools</span>
+            <span className="brand-badge muted-badge">Public-facing brand refresh</span>
+          </div>
+          <SquigsLogo />
+          <h1>Squigs Giveaway Picker</h1>
           <p className="hero-subtitle">{heroSubtitle}</p>
+          <p className="brand-summary">
+            Pick winners from tweets or imported comments with a cleaner branded interface that is ready for a public
+            landing page feel, not just an internal utility.
+          </p>
+          <div className="hero-feature-row">
+            <span className="hero-pill">Tweet Selector</span>
+            <span className="hero-pill">Comment Selector</span>
+            <span className="hero-pill">Copy-Ready Winner Posts</span>
+            <span className="hero-pill">Local Audit History</span>
+          </div>
           <div className="mode-switcher">
             <button
               className={`mode-button ${mode === 'tweet' ? 'active' : ''}`}
@@ -533,20 +548,31 @@ export default function App() {
             </button>
           </div>
         </div>
-        <div className="hero-stats">
-          <div className="hero-stat">
-            <strong>{activeEntries.length}</strong>
-            <span>{mode === 'tweet' ? 'Tweet Entries' : 'Comment Entries'}</span>
+        <aside className="hero-side">
+          <div className="hero-stats">
+            <div className="hero-stat">
+              <strong>{activeEntries.length}</strong>
+              <span>{mode === 'tweet' ? 'Tweet Entries' : 'Comment Entries'}</span>
+            </div>
+            <div className="hero-stat">
+              <strong>{activeHistory.length}</strong>
+              <span>Past Draws</span>
+            </div>
+            <div className="hero-stat">
+              <strong>{visibleWinners.length}</strong>
+              <span>Visible Winners</span>
+            </div>
           </div>
-          <div className="hero-stat">
-            <strong>{activeHistory.length}</strong>
-            <span>Past Draws</span>
+          <div className="hero-note-card">
+            <p className="eyebrow">Brand Mode</p>
+            <h2>{mode === 'tweet' ? 'Tweet giveaway flow' : 'Comment giveaway flow'}</h2>
+            <p>
+              {mode === 'tweet'
+                ? 'Paste status links, refine entrants, then reveal winners with a branded announcement block.'
+                : 'Use one target tweet, import comment entrants, and run a focused reply-based giveaway draw.'}
+            </p>
           </div>
-          <div className="hero-stat">
-            <strong>{visibleWinners.length}</strong>
-            <span>Visible Winners</span>
-          </div>
-        </div>
+        </aside>
       </header>
 
       <main className="layout">
