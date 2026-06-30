@@ -1,6 +1,6 @@
-# Giveaway Tweet Picker
+# Squigs Reloaded Giveaway Picker
 
-Local desktop-friendly giveaway winner picker built with Vite, React, and TypeScript. It runs fully in the browser with `localStorage` persistence, no backend, and no Twitter API keys.
+Ugly Giveaway Picker for Squigs Reloaded giveaways. Paste the tweet, pull the comments, or drop in tweets, names, wallets, links, and handles manually. The app uses local browser storage, fair crypto-backed shuffling, and copy-ready winner posts.
 
 ## Setup
 
@@ -8,94 +8,54 @@ Local desktop-friendly giveaway winner picker built with Vite, React, and TypeSc
 2. `npm run dev`
 3. Open the localhost URL shown in the terminal, usually `http://localhost:5173`
 
-## Railway
+## Production / Railway
 
-This repo is now compatible with a simple Railway static deployment flow:
+Railway configuration is included:
 
-1. Install command: `npm install`
-2. Build command: `npm run build`
-3. Start command: `npm start`
+- Install command: `npm install`
+- Build command: `npm run build`
+- Start command: `npm start`
 
-`npm start` runs a small Node server that serves the built `dist/` folder on `0.0.0.0:$PORT`, which is what Railway expects.
+`npm start` runs `server.mjs`, which serves the built `dist/` folder and powers `/api/replies` for X reply importing.
 
-The repo also includes [railway.json](C:/Users/Nelson/Desktop/Name%20Picker/railway.json), which explicitly tells Railway to use `RAILPACK`, run `npm run build`, and start with `npm start`.
+To enable automatic comment imports, configure:
+
+```bash
+X_BEARER_TOKEN=your_x_api_bearer_token
+```
 
 ## What It Does
 
-- Paste up to 100 `x.com` or `twitter.com` tweet links
-- Switch between `Tweet Selector` and `Comment Selector` modes
-- Parse and normalize tweet URLs
-- Keep working even when Twitter metadata fetch fails
-- Edit entries manually with display name, handle, avatar URL, note, and prize
-- Import and export CSV
-- Import and export full app state as JSON
-- Deduplicate duplicate tweet links
-- Warn on duplicate handles
-- Randomly pick any number of unique winners fairly
-- Reveal winners all at once or one by one
-- Lock winners until you intentionally reroll
-- Exclude previous winners from future draws
-- Persist entries, current draw, and winner history in `localStorage`
-- Export winner history to CSV
-- Generate tweet-ready winner announcements with character counting
-
-## Metadata Behavior
-
-The app uses a fallback-first strategy:
-
-- It tries the public Twitter oEmbed endpoint when available
-- If metadata enhancement fails, the entry still stays valid
-- Parsed handle and tweet ID are kept
-- Display name falls back to the handle
-- Avatar falls back to a generated local placeholder
-
-This means the app remains usable with tweet URLs alone.
-
-## Comment Selector Mode
-
-The app now includes a separate local `Comment Selector` mode:
-
-- Set one target tweet URL
-- Fetch recent replies from X with one capped server request
-- Import reply/comment URLs for that tweet
-- Or add comment entrants manually / by CSV
-- Draw winners from that imported comment pool locally
-
-Important:
-
-- Automatic reply import now uses the Railway backend and `X_BEARER_TOKEN`
-- To keep usage low, each import is capped and only runs when you click the fetch button
-- Recent Search limits still apply on the X side, so this works best for recent giveaway tweets
+- Comment Picker: import direct comments from one main tweet through `/api/replies`
+- Twitter Picker: paste tweets, names, wallets, links, handles, or other entries manually
+- Accepts up to 500 entries at a time
+- Deduplicates entries and direct tweet commenters
+- Preserves separate entries, current draw, and winner history for each mode in `localStorage`
+- Uses `crypto.getRandomValues` through the fair shuffle utility, not `Math.random`
+- Excludes previous winners when enabled
+- Exports/imports entries as CSV
+- Exports/imports full app state as JSON
+- Exports winner history as CSV
+- Generates Squigs-flavored winner announcement copy:
+  - `THE UGLY RNG HAS SPOKEN`
+  - winner list
+  - `DM to claim. Stay Ugly.`
 
 ## CSV Format
-
-Header row example:
 
 ```csv
 displayName,handle,avatarUrl,tweetUrl,tweetId,commentText,note,prize
 Jane Doe,janedoe,,https://x.com/janedoe/status/1770000000000000001,1770000000000000001,Excited for this!,VIP winner,Gold Pass
 ```
 
-Minimal CSV example:
+Minimal manual rows also work. Missing avatars fall back to generated local placeholders.
 
-```csv
-displayName,handle,avatarUrl,tweetUrl,tweetId,commentText,note,prize
-,,,"https://twitter.com/sample/status/1770000000000000002",1770000000000000002,,,
-```
+## Comment Import Notes
 
-## JSON Export
+The server searches recent X replies by `conversation_id`, filters to replies directly on the main tweet, removes duplicate commenters, and caps each import at 500 entries. X API plan and Recent Search limits still apply.
 
-The JSON export contains:
+## Brand
 
-- `entries`
-- `drawHistory`
-- `currentDraw`
-- `exportedAt`
-
-You can export that state from the UI and import it later on the same machine.
-
-## Notes
-
-- The app is dark by default and works on desktop and mobile.
-- Winner announcements support `Clean`, `Hype`, and `Minimal` styles.
-- Copy actions use the browser clipboard API, so use the app from the browser tab created by `npm run dev`.
+Project name: Squigs Reloaded  
+App name: Squigs Reloaded Giveaway Picker  
+Core vibe: Stay Ugly, comic-style, Web3/NFT giveaway chaos, but readable enough to run real draws.

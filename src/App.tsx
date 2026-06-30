@@ -1,6 +1,8 @@
 import confetti from 'canvas-confetti';
 import { useEffect, useMemo, useState } from 'react';
-import type { AppLanguage, DrawRecord, GiveawayEntry, PickerMode, WinnerSnapshot } from './types';
+import { SquigsLogo } from './components/SquigsLogo';
+import type { AppLanguage, AppStateExport, DrawRecord, GiveawayEntry, PickerMode, WinnerSnapshot } from './types';
+import { exportEntriesCsv, exportHistoryCsv, importEntriesCsv } from './utils/csv';
 import { fairShuffle } from './utils/random';
 import {
   loadCommentCurrentDraw,
@@ -26,67 +28,91 @@ const MAX_ENTRIES_PER_IMPORT = 500;
 
 const copy = {
   en: {
-    appTitle: 'Giveaway Picker',
-    appSubtitle: 'Pick ordered winners from direct tweet comments or a manually entered list.',
+    appTitle: 'Squigs Reloaded Giveaway Picker',
+    appSubtitle: 'Paste the tweet. Pull the comments. Let the ugly RNG choose.',
+    eyebrow: 'Stay Ugly',
+    heroBadge: 'Built for Squigs Reloaded chaos',
     commentPicker: 'Comment Picker',
     twitterPicker: 'Twitter Picker',
-    commentHelp: 'Paste the main tweet link, import direct comments, then draw winners.',
-    twitterHelp: 'Paste tweets, names, wallets, links, or handles. One item per line.',
+    commentHelp: 'Pick fair winners from direct tweet comments. Duplicates get booted from the ugly pit.',
+    twitterHelp: 'Paste tweets, names, wallets, links, or handles. One ugly entry per line.',
     tweetUrl: 'Tweet link',
     fetchLimit: 'Comment limit',
-    importComments: 'Import comments',
-    manualEntries: 'Manual entries',
-    addEntries: 'Add entries',
-    clearEntries: 'Clear entries',
+    importComments: 'Pull Comments',
+    manualEntries: 'Manual ugly entries',
+    addEntries: 'Add Ugly Entries',
+    clearEntries: 'Nuke Entries',
+    exportCsv: 'Export CSV',
+    importCsv: 'Import CSV',
+    exportJson: 'Export JSON',
+    importJson: 'Import JSON',
+    exportHistory: 'Export History',
+    resetHistory: 'Reset History',
     entries: 'Entries',
-    winners: 'Winners',
+    winners: 'Ugly Winners',
     winnerCount: 'Number of winners',
     excludePrevious: 'Exclude previous winners',
-    draw: 'Draw winners',
-    reroll: 'Reroll',
-    drawRecord: 'Draw record',
-    postText: 'Ready-to-post tweet',
-    copyPost: 'Copy post',
+    draw: 'Release the Squigs',
+    reroll: 'Reroll the Ugly',
+    drawRecord: 'Full ugly draw record',
+    postText: 'Ready-to-post winner tweet',
+    copyPost: 'Copy Winner Post',
     copyRecord: 'Copy record',
     history: 'History',
-    noEntries: 'No entries yet.',
-    noWinners: 'Run a draw to see winners.',
+    noEntries: 'No chaos loaded yet. Paste up to 500 entries and stay ugly.',
+    noWinners: 'The ugly RNG is waiting.',
+    fairBadge: 'Verified Ugly RNG',
     imported: 'Imported',
     directComments: 'direct comments',
     eligible: 'Eligible',
     tooManyEntries: 'Add up to 500 entries at a time.',
+    csvEmpty: 'CSV import is empty.',
+    jsonInvalid: 'JSON import failed.',
+    copied: 'Copied.',
     language: 'Francais',
   },
   fr: {
-    appTitle: 'Selecteur Giveaway',
-    appSubtitle: 'Choisissez des gagnants ordonnes depuis les commentaires directs ou une liste manuelle.',
+    appTitle: 'Selecteur Giveaway Squigs Reloaded',
+    appSubtitle: 'Collez le tweet. Importez les commentaires. Laissez le RNG laid choisir.',
+    eyebrow: 'Stay Ugly',
+    heroBadge: 'Construit pour le chaos Squigs Reloaded',
     commentPicker: 'Selecteur de commentaires',
     twitterPicker: 'Selecteur Twitter',
-    commentHelp: 'Collez le lien du tweet principal, importez les commentaires directs, puis tirez les gagnants.',
-    twitterHelp: 'Collez tweets, noms, wallets, liens ou handles. Une entree par ligne.',
+    commentHelp: 'Choisissez des gagnants justes depuis les commentaires directs. Les doublons sortent du chaos.',
+    twitterHelp: 'Collez tweets, noms, wallets, liens ou handles. Une entree laide par ligne.',
     tweetUrl: 'Lien du tweet',
     fetchLimit: 'Limite commentaires',
     importComments: 'Importer commentaires',
-    manualEntries: 'Entrees manuelles',
-    addEntries: 'Ajouter entrees',
+    manualEntries: 'Entrees laides manuelles',
+    addEntries: 'Ajouter entrees laides',
     clearEntries: 'Effacer entrees',
+    exportCsv: 'Exporter CSV',
+    importCsv: 'Importer CSV',
+    exportJson: 'Exporter JSON',
+    importJson: 'Importer JSON',
+    exportHistory: 'Exporter historique',
+    resetHistory: 'Reinitialiser historique',
     entries: 'Entrees',
-    winners: 'Gagnants',
+    winners: 'Gagnants laids',
     winnerCount: 'Nombre de gagnants',
     excludePrevious: 'Exclure les anciens gagnants',
-    draw: 'Tirer gagnants',
-    reroll: 'Relancer',
-    drawRecord: 'Preuve du tirage',
-    postText: 'Tweet pret a publier',
-    copyPost: 'Copier tweet',
+    draw: 'Liberer les Squigs',
+    reroll: 'Relancer le laid',
+    drawRecord: 'Preuve complete du tirage',
+    postText: 'Tweet gagnants pret a publier',
+    copyPost: 'Copier post gagnants',
     copyRecord: 'Copier preuve',
     history: 'Historique',
-    noEntries: 'Aucune entree.',
-    noWinners: 'Lancez un tirage pour voir les gagnants.',
+    noEntries: 'Aucun chaos charge. Collez jusqua 500 entrees et stay ugly.',
+    noWinners: 'Le RNG laid attend.',
+    fairBadge: 'RNG laid verifie',
     imported: 'Importe',
     directComments: 'commentaires directs',
     eligible: 'Eligibles',
     tooManyEntries: 'Ajoutez jusqua 500 entrees a la fois.',
+    csvEmpty: 'Limport CSV est vide.',
+    jsonInvalid: 'Import JSON impossible.',
+    copied: 'Copie.',
     language: 'English',
   },
 } as const;
@@ -101,6 +127,16 @@ function displayLabel(entry: Pick<GiveawayEntry, 'displayName' | 'handle'>) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function downloadText(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function normalizeManualValue(value: string) {
@@ -164,15 +200,57 @@ function createManualEntry(rawValue: string): GiveawayEntry {
   };
 }
 
+function createEntryFromCsvRow(row: {
+  displayName: string;
+  handle: string;
+  avatarUrl: string;
+  tweetUrl: string;
+  tweetId: string;
+  commentText: string;
+  note: string;
+  prize: string;
+}): GiveawayEntry {
+  const parsed = row.tweetUrl ? parseTweetUrl(row.tweetUrl) : null;
+  const handle = row.handle.replace(/^@+/, '').trim() || (parsed?.isValid ? parsed.handle : '');
+  const displayName = row.displayName.trim() || handle || row.tweetUrl || row.tweetId || 'ugly-entry';
+  const timestamp = nowIso();
+
+  return {
+    id: createId('csv'),
+    tweetUrl: parsed?.isValid ? parsed.normalizedUrl : row.tweetUrl.trim(),
+    normalizedTweetUrl: parsed?.isValid ? parsed.normalizedUrl : (row.tweetUrl || displayName).trim().toLowerCase(),
+    tweetId: parsed?.isValid ? parsed.tweetId : row.tweetId || createId('item'),
+    displayName,
+    handle,
+    avatarUrl: row.avatarUrl.trim() || createPlaceholderAvatar(handle || displayName),
+    commentText: row.commentText.trim(),
+    note: row.note.trim(),
+    prize: row.prize.trim(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    metadataStatus: parsed?.isValid ? 'parsed' : 'manual',
+  };
+}
+
 function buildPostText(winners: WinnerSnapshot[], language: AppLanguage) {
   if (!winners.length) {
     return '';
   }
 
-  const intro = language === 'fr' ? 'Les gagnants sont :' : 'The winners are:';
-  const outro = language === 'fr' ? 'DM-moi pour reclamer.' : 'DM me to claim.';
+  const intro = language === 'fr' ? 'LE RNG LAID A PARLE' : 'THE UGLY RNG HAS SPOKEN';
+  const outro = language === 'fr' ? 'DM pour reclamer. Stay Ugly.' : 'DM to claim. Stay Ugly.';
   const lines = winners.map((winner, index) => `${index + 1}. ${displayLabel(winner)}`);
-  return [intro, '', ...lines, '', outro].join('\n');
+  const full = [intro, '', ...lines, '', outro].join('\n');
+  if (full.length <= 280) {
+    return full;
+  }
+
+  const compact = [intro, ...lines, outro].join('\n');
+  if (compact.length <= 280) {
+    return compact;
+  }
+
+  return lines.join('\n');
 }
 
 function buildRecordText(record: DrawRecord | null, mode: PickerMode, entries: GiveawayEntry[], language: AppLanguage) {
@@ -295,6 +373,68 @@ export default function App() {
     setManualInput('');
   }
 
+  function importCsvText(value: string) {
+    const rows = importEntriesCsv(value);
+    if (!rows.length) {
+      window.alert(t.csvEmpty);
+      return;
+    }
+
+    if (rows.length > MAX_ENTRIES_PER_IMPORT) {
+      window.alert(t.tooManyEntries);
+      return;
+    }
+
+    setEntries((current) => mergeEntries(current, rows.map(createEntryFromCsvRow)));
+  }
+
+  async function importCsvFile(file: File | null) {
+    if (file) {
+      importCsvText(await file.text());
+    }
+  }
+
+  function exportJson() {
+    const payload: AppStateExport = {
+      exportedAt: nowIso(),
+      mode,
+      targetTweetUrl: mode === 'comment' ? targetTweetUrl.trim() : undefined,
+      entries: activeEntries,
+      drawHistory: activeHistory,
+      currentDraw: activeDraw,
+    };
+
+    downloadText(`squigs-reloaded-${mode}-state.json`, JSON.stringify(payload, null, 2), 'application/json');
+  }
+
+  async function importJsonFile(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(await file.text()) as Partial<AppStateExport>;
+      const importedEntries = Array.isArray(parsed.entries) ? parsed.entries : [];
+      const importedHistory = Array.isArray(parsed.drawHistory) ? parsed.drawHistory : [];
+      const importedDraw = parsed.currentDraw ?? null;
+
+      if (importedEntries.length > MAX_ENTRIES_PER_IMPORT) {
+        window.alert(t.tooManyEntries);
+        return;
+      }
+
+      setEntries(importedEntries);
+      setHistory(importedHistory);
+      setCurrentDraw(importedDraw);
+
+      if (mode === 'comment') {
+        setTargetTweetUrl(parsed.targetTweetUrl ?? targetTweetUrl);
+      }
+    } catch {
+      window.alert(t.jsonInvalid);
+    }
+  }
+
   async function importComments() {
     const trimmedUrl = targetTweetUrl.trim();
     if (!trimmedUrl) {
@@ -385,14 +525,26 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div>
+      <header className="app-header comic-panel">
+        <div className="hero-brand">
+          <SquigsLogo />
+          <span className="sticker-badge">{t.eyebrow}</span>
+        </div>
+        <div className="hero-copy">
+          <p className="eyebrow">{t.heroBadge}</p>
           <h1>{t.appTitle}</h1>
           <p>{t.appSubtitle}</p>
+          <div className="hero-tags" aria-label="Squigs Reloaded giveaway features">
+            <span>Ugly Giveaway Picker</span>
+            <span>Fair Draw</span>
+            <span>Web3 chaos ready</span>
+          </div>
         </div>
-        <button className="secondary-button" type="button" onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}>
-          {t.language}
-        </button>
+        <div className="header-actions">
+          <button className="secondary-button" type="button" onClick={() => setLanguage(language === 'en' ? 'fr' : 'en')}>
+            {t.language}
+          </button>
+        </div>
       </header>
 
       <main className="app-grid">
@@ -448,9 +600,45 @@ export default function App() {
               {t.clearEntries}
             </button>
           </div>
+
+          <div className="utility-grid">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => downloadText(`squigs-reloaded-${mode}-entries.csv`, exportEntriesCsv(activeEntries), 'text/csv')}
+            >
+              {t.exportCsv}
+            </button>
+            <label className="file-button">
+              {t.importCsv}
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(event) => {
+                  void importCsvFile(event.target.files?.[0] ?? null);
+                  event.currentTarget.value = '';
+                }}
+              />
+            </label>
+            <button className="secondary-button" type="button" onClick={exportJson}>
+              {t.exportJson}
+            </button>
+            <label className="file-button">
+              {t.importJson}
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={(event) => {
+                  void importJsonFile(event.target.files?.[0] ?? null);
+                  event.currentTarget.value = '';
+                }}
+              />
+            </label>
+          </div>
         </section>
 
         <section className="panel draw-panel">
+          <div className="draw-badge">{t.fairBadge}</div>
           <div className="stats-row">
             <div>
               <strong>{activeEntries.length}</strong>
@@ -492,6 +680,27 @@ export default function App() {
             </button>
             <button className="secondary-button large" type="button" onClick={() => drawWinners(true)}>
               {t.reroll}
+            </button>
+          </div>
+
+          <div className="history-actions">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => downloadText(`squigs-reloaded-${mode}-winner-history.csv`, exportHistoryCsv(activeHistory), 'text/csv')}
+            >
+              {t.exportHistory}
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => {
+                if (window.confirm(language === 'fr' ? 'Reinitialiser lhistorique ?' : 'Reset winner history?')) {
+                  setHistory([]);
+                }
+              }}
+            >
+              {t.resetHistory}
             </button>
           </div>
         </section>
@@ -551,7 +760,10 @@ export default function App() {
 
           <div className="output-grid">
             <label>
-              <span>{t.postText}</span>
+              <span className="textarea-heading">
+                {t.postText}
+                <small>{postText.length}/280</small>
+              </span>
               <textarea readOnly rows={8} value={postText} />
             </label>
             <label>
@@ -570,6 +782,8 @@ export default function App() {
           </div>
         </section>
       </main>
+
+      <footer className="app-footer">Squigs Reloaded &bull; Stay Ugly</footer>
     </div>
   );
 }
