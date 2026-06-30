@@ -7,7 +7,7 @@ const port = Number(process.env.PORT || 3000);
 const host = '0.0.0.0';
 const distDir = join(process.cwd(), 'dist');
 const X_BEARER_TOKEN = process.env.X_BEARER_TOKEN;
-const MAX_REPLY_IMPORT = 100;
+const MAX_REPLY_IMPORT = 500;
 
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
@@ -58,47 +58,75 @@ async function fetchRecentReplies(tweetUrl, limit) {
   }
 
   const cappedLimit = Math.max(1, Math.min(limit, MAX_REPLY_IMPORT));
-  const searchParams = new URLSearchParams({
-    query: `conversation_id:${parsed.tweetId} is:reply`,
-    max_results: String(Math.min(cappedLimit, 100)),
-    expansions: 'author_id',
-    'tweet.fields': 'author_id,conversation_id,created_at,text',
-    'user.fields': 'name,username,profile_image_url',
-  });
+  const seenAuthors = new Set();
+  const replies = [];
+  let nextToken = '';
+  let searchedCount = 0;
 
-  const response = await fetch(`https://api.x.com/2/tweets/search/recent?${searchParams.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${X_BEARER_TOKEN}`,
-    },
-  });
+  do {
+    const searchParams = new URLSearchParams({
+      query: `conversation_id:${parsed.tweetId} is:reply`,
+      max_results: String(Math.min(cappedLimit - replies.length, 100)),
+      expansions: 'author_id',
+      'tweet.fields': 'author_id,conversation_id,created_at,text,referenced_tweets,in_reply_to_user_id',
+      'user.fields': 'name,username,profile_image_url',
+    });
 
-  const payload = await response.json();
+    if (nextToken) {
+      searchParams.set('next_token', nextToken);
+    }
 
-  if (!response.ok) {
-    const message =
-      payload?.detail ||
-      payload?.title ||
-      payload?.errors?.[0]?.message ||
-      'X API request failed.';
-    return { error: message, statusCode: response.status };
-  }
+    const response = await fetch(`https://api.x.com/2/tweets/search/recent?${searchParams.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${X_BEARER_TOKEN}`,
+      },
+    });
 
-  const usersById = new Map((payload.includes?.users || []).map((user) => [user.id, user]));
-  const replies = (payload.data || []).map((tweet) => {
-    const user = usersById.get(tweet.author_id);
-    return {
-      tweetUrl: user?.username ? `https://x.com/${user.username}/status/${tweet.id}` : `https://x.com/i/status/${tweet.id}`,
-      normalizedTweetUrl: user?.username
-        ? `https://x.com/${user.username}/status/${tweet.id}`
-        : `https://x.com/i/status/${tweet.id}`,
-      tweetId: tweet.id,
-      displayName: user?.name || user?.username || `reply-${tweet.id}`,
-      handle: user?.username || '',
-      avatarUrl: user?.profile_image_url || '',
-      commentText: tweet.text || '',
-      fetchedAt: new Date().toISOString(),
-    };
-  });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      const message =
+        payload?.detail ||
+        payload?.title ||
+        payload?.errors?.[0]?.message ||
+        'X API request failed.';
+      return { error: message, statusCode: response.status };
+    }
+
+    searchedCount += payload.meta?.result_count || 0;
+    const usersById = new Map((payload.includes?.users || []).map((user) => [user.id, user]));
+
+    for (const tweet of payload.data || []) {
+      const repliedToMainTweet = (tweet.referenced_tweets || []).some(
+        (reference) => reference.type === 'replied_to' && reference.id === parsed.tweetId,
+      );
+
+      if (!repliedToMainTweet || seenAuthors.has(tweet.author_id)) {
+        continue;
+      }
+
+      seenAuthors.add(tweet.author_id);
+      const user = usersById.get(tweet.author_id);
+      replies.push({
+        tweetUrl: user?.username ? `https://x.com/${user.username}/status/${tweet.id}` : `https://x.com/i/status/${tweet.id}`,
+        normalizedTweetUrl: user?.username
+          ? `https://x.com/${user.username}/status/${tweet.id}`
+          : `https://x.com/i/status/${tweet.id}`,
+        tweetId: tweet.id,
+        displayName: user?.name || user?.username || `reply-${tweet.id}`,
+        handle: user?.username || '',
+        avatarUrl: user?.profile_image_url || '',
+        commentText: tweet.text || '',
+        fetchedAt: new Date().toISOString(),
+      });
+
+      if (replies.length >= cappedLimit) {
+        break;
+      }
+    }
+
+    nextToken = payload.meta?.next_token || '';
+  } while (nextToken && replies.length < cappedLimit);
 
   return {
     statusCode: 200,
@@ -107,6 +135,7 @@ async function fetchRecentReplies(tweetUrl, limit) {
     meta: {
       requestedLimit: limit,
       importedCount: replies.length,
+      searchedCount,
       cappedLimit,
     },
   };
